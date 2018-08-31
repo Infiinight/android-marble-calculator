@@ -5,8 +5,6 @@ import android.graphics.Canvas;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
-import android.view.WindowManager;
-
 import java.util.ArrayList;
 
 public class Game extends SurfaceView implements SurfaceHolder.Callback {
@@ -15,6 +13,7 @@ public class Game extends SurfaceView implements SurfaceHolder.Callback {
     private Background background;
     private ArrayList<Marble> marbleList;
     private ArrayList<Plank> plankList;
+    private ArrayList<Wall> wallList;
 
 
 
@@ -32,9 +31,9 @@ public class Game extends SurfaceView implements SurfaceHolder.Callback {
 
         //allow events to be handled
         setFocusable(true);
-
-
     }
+
+
 
     @Override
     public void surfaceChanged(SurfaceHolder surfaceHolder,int format, int width, int height){
@@ -62,7 +61,11 @@ public class Game extends SurfaceView implements SurfaceHolder.Callback {
         background = new Background();
         marbleList = new ArrayList<>();
         plankList = new ArrayList<>();
+        wallList = new ArrayList<>();
         plankList.add(new Plank(100,1000,700,1100,10));
+        plankList.add(new Plank(600,1500,1000,1300,10));
+        wallList.add(new Wall(new Point(900,500),new Point(920,1300)));
+        System.out.println(plankList.size());
 
         //safely start game loop
         thread.setRunning(true);
@@ -80,21 +83,40 @@ public class Game extends SurfaceView implements SurfaceHolder.Callback {
     }
 
     public void update(){
-        for(int i = 0; i < marbleList.size(); i++){
-            for(int j = 0; j < plankList.size(); j++) {
-                marbleList.get(i).collidePlank(plankList.get(j));
-                marbleList.get(i).updateCollision(plankList.get(j));
+        for(Marble m : marbleList) {
+            for (Plank p : plankList) {
+                if (m.collidePlank(p)) {
+                    m.updatePlankCollision(p);
+                    break; //break the moment detect collision with one plank; ensures 1 - 1 collision
+                }
+                if (m.getCollidingPlank() == p) {
+                    if (!p.lieRange(m)) { // if marble is not in range of plank
+                        m.resetPlankFall();
+                    }
+                    break; //same as above; ensures 1 - 1 collision, also saves time
+                }
+            }
+            for (Wall w: wallList){
+                if (m.getCollidingWall() == w){
+                    if(!m.collideWall(w)){
+                        m.resetWallFall();
+                    }
+                    break;
+                }
+                if (m.collideWall(w)){
+                    m.updateWallCollision(w);
+                    break;
+                }
+
 
             }
-            marbleList.get(i).update();
-            if (marbleList.get(i).getY() > getHeight()){
-                marbleList.remove(i);
-                System.out.println("REMOVED");
-                i--;
 
+            m.update();
+            if (m.getY() > getHeight()) {
+                marbleList.remove(m);
+                System.out.println("REMOVED");
             }
         }
-
     }
 
     public void draw(Canvas canvas){
@@ -104,9 +126,16 @@ public class Game extends SurfaceView implements SurfaceHolder.Callback {
             marbleList.get(i).draw(canvas);
         }
         for(int i = 0; i < plankList.size(); i++){
-            canvas.drawLines(plankList.get(i).toFloatArray(),plankList.get(i).getPaint());
+            plankList.get(i).draw(canvas);
+        }
+        for(int i = 0; i < wallList.size(); i++){
+            wallList.get(i).draw(canvas);
         }
     }
+
+
+
+
 
 
 }
